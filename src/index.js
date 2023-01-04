@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const http = require('http');
 const socketio = require('socket.io');
-
+const Filter = require('bad-words');
 
 const app = express();
 const server = http.createServer(app);
@@ -33,15 +33,26 @@ let count = 0
 io.on('connection', (socket)=>{
     console.log('New WebSocket connection')
 
+    const filter = new Filter()
+    
     socket.emit('message', 'Welcome!')
-    socket.on('sendMessage', (message)=>{
+    socket.broadcast.emit('message', 'A new user has joined!')
+    socket.on('sendMessage', (message, callback)=>{
+        if(filter.isProfane(message)){
+            return callback('Profanity is not allowed!')
+        }
         io.emit('message', message)
+        callback('Delivered')
     })
-    // socket.emit('countUpdated', count)
-    // socket.on('increment', ()=>{
-    //     count++
-    //     io.emit('countUpdated', count)
-    // })
+
+    socket.on('disconnect', ()=>{
+        io.emit('message', 'A user has left!')
+    })
+    
+    socket.on('sendLocation', (coords,callback)=>{
+        io.emit('locationMessage', `https://google.com/maps?q=${coords.latitude},${coords.longitude}`)
+        callback()
+    })
 }
 )
 // directory
